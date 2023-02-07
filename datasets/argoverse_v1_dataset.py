@@ -74,11 +74,39 @@ class ArgoverseV1Dataset(Dataset):
         return self._processed_paths
 
     def process(self) -> None:
+        if self._split == 'sample':
+            self.process_single()
+        else :
+            self.process_multi()
+
+    def process_single(self) -> None:
         am = ArgoverseMap()
         for raw_path in tqdm(self.raw_paths):
-            kwargs = process_argoverse(self._split, raw_path, am, self._local_radius)
+            params = self._split, raw_path, am, self._local_radius
+            kwargs = process_argoverse(params)
             data = TemporalData(**kwargs)
             torch.save(data, os.path.join(self.processed_dir, str(kwargs['seq_id']) + '.pt'))
+
+    def process_multi(self) -> None:
+        am = ArgoverseMap()
+        pool = torch.multiprocessing.Pool()
+
+        with tqdm(len(self.raw_paths)) as pbar:
+            params = [
+                (self._split, raw_path, am, self._local_radius)
+                for raw_path in self.raw_paths
+            ]
+            for kwargs in tqdm(pool.imap_unordered(process_argoverse, params)):
+                data = TemporalData(**kwargs)
+                torch.save(
+                    data,
+                    os.path.join(
+                        self.processed_dir, str(kwargs["seq_id"]) + ".pt"
+                    ),
+                )
+                pbar.update()
+        pool.close()
+        pool.join()
 
     def len(self) -> int:
         return len(self._raw_file_names)
@@ -87,10 +115,9 @@ class ArgoverseV1Dataset(Dataset):
         return torch.load(self.processed_paths[idx])
 
 
-def process_argoverse(split: str,
-                      raw_path: str,
-                      am: ArgoverseMap,
-                      radius: float) -> Dict:
+
+def process_argoverse(params) -> Dict:
+    split, raw_path, am, radius = params
     df = pd.read_csv(raw_path)
 
     # filter out actors that are unseen during the historical time steps
