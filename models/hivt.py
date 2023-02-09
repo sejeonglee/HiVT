@@ -217,19 +217,40 @@ class HiVT(pl.LightningModule):
         Returns:
             Dict[seq_ids, predicted values]
         """
-        y_hat: torch.Tensor = self(data)[0]
-        assert y_hat.shape[0] == self.num_modes
-        assert y_hat.shape[2] == self.future_steps
-        assert y_hat.shape[3] == 4  # includes loc + scale
+        # Forwarding the data through the model
+        y_hat: torch.Tensor
+        pi: torch.Tensor
+        y_hat, pi = self(data)
 
+        # Info about the output data shape
+        assert y_hat.shape == (
+            self.num_modes,
+            data.num_nodes,
+            self.future_steps,
+            4,
+        )
+        assert pi.shape == (data.num_nodes, self.num_modes)
+
+        # Selecting data for av agents
         predicted_val: torch.Tensor = y_hat[:, data.av_index, :, :2].transpose(
             0, 1
         )
-        seq_ids: torch.Tensor = data.seq_id
+        assert predicted_val.shape == (
+            len(data.av_index),
+            self.num_modes,
+            self.future_steps,
+            2,
+        )
 
-        return {
-            seq_t.item(): data for seq_t, data in zip(seq_ids, predicted_val)
+        # Creating output dict
+        assert data.seq_id.ndim == 1
+        assert data.seq_id.shape[0] == len(data.av_index)
+        output_dict: Dict[int, torch.Tensor] = {
+            seq_t.item(): data
+            for seq_t, data in zip(data.seq_id, predicted_val)
         }
+
+        return output_dict
 
     def configure_optimizers(self):
         decay = set()
