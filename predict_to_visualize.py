@@ -9,6 +9,7 @@ import pytorch_lightning as pl
 from torch_geometric.data import DataLoader
 
 from datasets import ArgoverseV1Dataset
+from utils import TemporalData
 
 if __name__ == "__main__":
     pl.seed_everything(2022)

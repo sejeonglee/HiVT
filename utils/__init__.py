@@ -16,6 +16,7 @@ from typing import List, Optional, Tuple
 import torch
 import torch.nn as nn
 from torch_geometric.data import Data
+import numpy as np
 
 from . import evalai
 from . import visualize
@@ -160,10 +161,76 @@ def init_weights(m: nn.Module) -> None:
                 nn.init.zeros_(param)
 
 
+def visualize_seq_trajectory(
+    input_data: TemporalData,
+    predicted_trajectory: visualize.SeqTrajectory,
+    weights: Optional[torch.Tensor] = None,
+) -> str:
+    """
+    Args:
+        input_data(TemporalData): The input data.
+        predicted_trajectory(SeqTrajectory): The predicted trajectory.
+        option(VisualizeOption): The option to visualize.
+    Returns:
+        The svg string.
+        if option.svg_filepath is not None, the svg string is also saved to the file.
+    """
+    positions: torch.Tensor = visualize.restore_rotation(
+        input_data.positions, input_data.theta
+    )
+    predictions: torch.Tensor = visualize.restore_rotation(
+        predicted_trajectory.traj_tensor, input_data.theta
+    )
+    probs = predicted_trajectory.prob_tensor
+    rotate_angles: torch.Tensor = input_data.rotate_angles - input_data.theta
+    canvas_size: float = abs(positions.max() - positions.min()).item()
+
+    html_template = """
+        <svg 
+            xmlns="http://www.w3.org/2000/svg" version="1.1"
+            width="800" height="800"
+            viewBox="{min_x} {min_y} {canvas_width} {canvas_height}">
+        {trajectories}
+        {centerlines}
+        {rects}
+        </svg>"""
+    svg = html_template.format(
+        min_x=positions.min() - canvas_size * 0.1,
+        min_y=positions.min() - canvas_size * 0.1,
+        canvas_width=canvas_size * 1.2,
+        canvas_height=canvas_size * 1.2,
+        rects="\n".join(
+            visualize.get_svg_node_rectangles(
+                positions,
+                rotate_angles,
+                weights,
+                av_index=input_data.av_index,
+                agent_index=input_data.agent_index,
+            )
+        ),
+        centerlines="\n".join(
+            visualize.get_svg_map_centerlines(
+                positions, input_data.origin[0].numpy(), input_data.city
+            )
+        ),
+        trajectories="\n".join(
+            visualize.get_svg_trajectories(
+                predictions,
+                probs,
+                positions,
+                av_index=input_data.av_index,
+                agent_index=input_data.agent_index,
+            )
+        ),
+    )
+    return svg
+
+
 __all__ = [
     "TemporalData",
     "DistanceDropEdge",
     "init_weights",
     "evalai",
     "visualize",
+    "visualize_seq_trajectory",
 ]

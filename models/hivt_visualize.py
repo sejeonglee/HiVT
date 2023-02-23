@@ -7,44 +7,7 @@ from torch import Tensor
 
 from models.hivt import HiVT
 from utils import TemporalData
-
-
-@dataclass
-class Point:
-    timestep: int
-    x: float
-    y: float
-
-
-@dataclass
-class TrajectoryMode:
-    probability: float
-    points: List[Point]
-
-    @property
-    def pi(self) -> float:
-        return self.probability
-
-
-@dataclass
-class NodeTrajectory:
-    is_av: bool
-    modes: List[TrajectoryMode]
-
-
-@dataclass
-class SeqTrajectorySet:
-    seq_id: int
-    nodes_traj: List[NodeTrajectory]
-    tensor: Tensor
-
-    @property
-    def av_traj(self) -> NodeTrajectory:
-        return self.nodes_traj[0]
-
-    @property
-    def non_av_traj(self) -> List[NodeTrajectory]:
-        return self.nodes_traj[1:]
+from utils.visualize import SeqTrajectory
 
 
 def _pairwise(iterable):
@@ -63,7 +26,7 @@ class HiVTVisualize(HiVT):
         data: TemporalData,
         batch_idx: int,
         dataloader_idx: Optional[int] = None,
-    ) -> List[SeqTrajectorySet]:
+    ) -> List[SeqTrajectory]:
         """
         Returns:
             Dict[seq_ids, predicted values]
@@ -102,36 +65,11 @@ class HiVTVisualize(HiVT):
         traj_sliced_per_seq = torch.split(nodes_traj, split_indices)
         prob_sliced_per_seq = torch.split(prob_i, split_indices)
 
-        output: List[SeqTrajectorySet] = [
-            SeqTrajectorySet(
+        output: List[SeqTrajectory] = [
+            SeqTrajectory(
                 seq_id=seq_id,
-                nodes_traj=[
-                    NodeTrajectory(
-                        is_av=True if i == 0 else False,
-                        modes=[
-                            TrajectoryMode(
-                                probability=mode_prob,
-                                points=[
-                                    Point(
-                                        timestep=timestep,
-                                        x=x.item(),
-                                        y=y.item(),
-                                    )
-                                    for timestep, (x, y) in enumerate(
-                                        mode_points
-                                    )
-                                ],
-                            )
-                            for mode_points, mode_prob in zip(
-                                node_trajs, node_probs
-                            )
-                        ],
-                    )
-                    for i, (node_trajs, node_probs) in enumerate(
-                        zip(seq_trajs, seq_probs)
-                    )
-                ],
-                tensor=seq_trajs,
+                traj_tensor=seq_trajs.detach().cpu(),
+                prob_tensor=seq_probs.detach().cpu(),
             )
             for seq_id, seq_trajs, seq_probs in zip(
                 data.seq_id, traj_sliced_per_seq, prob_sliced_per_seq
