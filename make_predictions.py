@@ -10,7 +10,7 @@ from torch_geometric.data import DataLoader
 from datasets import ArgoverseV1Dataset
 from models.hivt import HiVT
 from argoverse.evaluation.competition_util import generate_forecasting_h5
-import evalai_api as evalai
+import utils.evalai as evalai
 
 if __name__ == "__main__":
     pl.seed_everything(2022)
@@ -25,7 +25,9 @@ if __name__ == "__main__":
     parser.add_argument("--ckpt_path", type=str, required=True)
     parser.add_argument("--pickle_prediction", type=bool, default=True)
     # submission arguments
-    parser.add_argument("--h5_filename", type=str, default="argoverse_forecasting_test")
+    parser.add_argument(
+        "--h5_filename", type=str, default="argoverse_forecasting_test"
+    )
     parser.add_argument("--method_name", type=str, required=True)
     parser.add_argument("--method_description", type=str)
     args = parser.parse_args()
