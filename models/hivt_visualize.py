@@ -67,7 +67,7 @@ class HiVTVisualize(HiVT):
 
         output: List[SeqTrajectory] = [
             SeqTrajectory(
-                seq_id=seq_id,
+                seq_id=seq_id.item(),
                 traj_tensor=seq_trajs.detach().cpu(),
                 prob_tensor=seq_probs.detach().cpu(),
             )
