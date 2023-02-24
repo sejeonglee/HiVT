@@ -43,6 +43,7 @@ def get_svg_node_rectangles(
                                 width="{width}" height="{height}"
                                 stroke="black" stroke-width="{0.1 + nodes_weight[i] * 0.5}"
                                 fill="{color_dict.get(i, 'transparent')}"
+                                opacity="{0.5 + nodes_weight[i] * 0.5}"
                                 transform="rotate({-angle * 57.2958}, {x}, {y})"/>"""
         rect_tags.append(rect_tag)
     return rect_tags
@@ -84,12 +85,20 @@ def get_svg_map_centerlines(
 
 
 def get_svg_trajectories(
-    trajectories, probs, positions, *, agent_index, av_index, width=4, height=2
+    trajectories,
+    probs,
+    positions,
+    gt_trajectories,
+    *,
+    agent_index,
+    av_index,
+    width=4,
+    height=2,
 ) -> List[str]:
     trajectory_tags: List[str] = []
 
-    for node_index, (node_traj, node_positions) in enumerate(
-        zip(trajectories, positions)
+    for node_index, (node_traj, node_positions, node_gt) in enumerate(
+        zip(trajectories, positions, gt_trajectories)
     ):
         node_origin = node_positions[0]
         # if node_index == agent_index or node_index == av_index:
@@ -99,4 +108,8 @@ def get_svg_trajectories(
                 trajectory_tags.append(
                     f"""<circle cx="{x + node_origin[0]}" cy="{y + node_origin[1]}" r="0.3" fill="hsl(210, 100%, {100 - probability*100 * 2}%)" />"""
                 )
+        for x, y in node_gt:
+            trajectory_tags.append(
+                f"""<circle cx="{x + node_origin[0]}" cy="{y + node_origin[1]}" r="0.3" fill="hsl(0, 100%, 50%)" />"""
+            )
     return trajectory_tags
