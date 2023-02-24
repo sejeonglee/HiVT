@@ -1,5 +1,5 @@
 from os import PathLike
-from typing import Optional
+from typing import List, Optional
 
 import numpy as np
 import torch
@@ -21,35 +21,6 @@ class SeqTrajectory:
         self.prob_tensor = prob_tensor
 
 
-class VisualizeOption:
-    """
-    Args:
-        trajectory(bool): Whether to visualize the trajectory.
-        node(bool): Whether to visualize the node.
-        centerline(bool): Whether to visualize the centerline.
-        svg_filepath(PathLike): The path to the svg file.
-    """
-
-    trajectory: bool
-    node: bool
-    centerline: bool
-    width: float
-    height: float
-    svg_filepath: Optional[PathLike]
-
-    def __init__(
-        self,
-        trajectory: bool = True,
-        node: bool = True,
-        centerline: bool = True,
-        svg_filepath: Optional[PathLike] = None,
-    ):
-        self.trajectory = trajectory
-        self.node = node
-        self.centerline = centerline
-        self.svg_filepath = svg_filepath
-
-
 def restore_rotation(tensor: Tensor, theta: Tensor) -> Tensor:
     assert tensor.shape[-1] == 2
 
@@ -64,7 +35,7 @@ def restore_rotation(tensor: Tensor, theta: Tensor) -> Tensor:
 
 def get_svg_node_rectangles(
     positions, angles, nodes_weight, *, av_index, agent_index, width=4, height=2
-):
+) -> List[str]:
     rect_tags = []
     color_dict = {agent_index: "red", av_index: "blue"}
     for i, ((x, y), angle) in enumerate(zip(positions[:, 0, :], angles)):
@@ -81,7 +52,7 @@ def get_svg_map_centerlines(
     positions,
     origin,
     city: str,
-) -> list:
+) -> List[str]:
     seq_lane_props = AVM.city_lane_centerlines_dict[city]
 
     x_max = positions[:, :, 0].max()
@@ -114,8 +85,8 @@ def get_svg_map_centerlines(
 
 def get_svg_trajectories(
     trajectories, probs, positions, *, agent_index, av_index, width=4, height=2
-):
-    trajectory_tags = []
+) -> List[str]:
+    trajectory_tags: List[str] = []
 
     for node_index, (node_traj, node_positions) in enumerate(
         zip(trajectories, positions)

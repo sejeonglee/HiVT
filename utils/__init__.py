@@ -185,7 +185,7 @@ def visualize_seq_trajectory(
     rotate_angles: torch.Tensor = input_data.rotate_angles - input_data.theta
     canvas_size: float = abs(positions.max() - positions.min()).item()
 
-    html_template = """
+    svg_template = """
         <svg 
             xmlns="http://www.w3.org/2000/svg" version="1.1"
             width="800" height="800"
@@ -194,7 +194,7 @@ def visualize_seq_trajectory(
         {centerlines}
         {rects}
         </svg>"""
-    svg = html_template.format(
+    svg = svg_template.format(
         min_x=positions.min() - canvas_size * 0.1,
         min_y=positions.min() - canvas_size * 0.1,
         canvas_width=canvas_size * 1.2,
