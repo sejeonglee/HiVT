@@ -7,6 +7,8 @@ from torch import Tensor
 
 from argoverse.map_representation.map_api import ArgoverseMap
 
+AVM = ArgoverseMap()
+
 
 class SeqTrajectory:
     seq_id: int
@@ -80,8 +82,7 @@ def get_svg_map_centerlines(
     origin,
     city: str,
 ) -> list:
-    avm = ArgoverseMap()
-    seq_lane_props = avm.city_lane_centerlines_dict[city]
+    seq_lane_props = AVM.city_lane_centerlines_dict[city]
 
     x_max = positions[:, :, 0].max()
     x_min = positions[:, :, 0].min()
