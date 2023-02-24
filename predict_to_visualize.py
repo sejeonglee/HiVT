@@ -23,6 +23,7 @@ if __name__ == "__main__":
     parser.add_argument("--gpus", type=int, default=1)
     parser.add_argument("--ckpt_path", type=str, required=True)
     parser.add_argument("--pickle_prediction", type=bool, default=True)
+    parser.add_argument("--split", type=str, default="test")
     args = parser.parse_args()
 
     trainer = pl.Trainer.from_argparse_args(args)
@@ -30,7 +31,9 @@ if __name__ == "__main__":
         checkpoint_path=args.ckpt_path, parallel=True
     )
     test_dataset = ArgoverseV1Dataset(
-        root=args.root, split="sample", local_radius=model.hparams.local_radius
+        root=args.root,
+        split=args.split,
+        local_radius=model.hparams.local_radius,
     )
     dataloader = DataLoader(
         test_dataset,
