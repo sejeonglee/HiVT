@@ -184,6 +184,9 @@ def visualize_seq_trajectory(
     gt: torch.Tensor = visualize.restore_rotation(
         input_data.y, input_data.theta
     )
+    mask_valid = torch.cat(
+        [torch.tensor([True]), torch.all(~input_data.padding_mask[1:,], dim=1)]
+    )
     probs = predicted_trajectory.prob_tensor
     rotate_angles: torch.Tensor = input_data.rotate_angles - input_data.theta
     canvas_size: float = abs(positions.max() - positions.min()).item()
@@ -207,6 +210,7 @@ def visualize_seq_trajectory(
                 positions,
                 rotate_angles,
                 weights,
+                mask_valid,
                 av_index=input_data.av_index,
                 agent_index=input_data.agent_index,
             )
@@ -222,6 +226,7 @@ def visualize_seq_trajectory(
                 probs,
                 positions,
                 gt,
+                mask_valid,
                 av_index=input_data.av_index,
                 agent_index=input_data.agent_index,
             )

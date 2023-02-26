@@ -34,18 +34,31 @@ def restore_rotation(tensor: Tensor, theta: Tensor) -> Tensor:
 
 
 def get_svg_node_rectangles(
-    positions, angles, nodes_weight, *, av_index, agent_index, width=4, height=2
+    positions,
+    angles,
+    nodes_weight,
+    mask_valid,
+    *,
+    av_index,
+    agent_index,
+    width=4,
+    height=2,
 ) -> List[str]:
     rect_tags = []
     color_dict = {agent_index: "red", av_index: "blue"}
-    for i, ((x, y), angle) in enumerate(zip(positions[:, 0, :], angles)):
-        rect_tag = f"""<rect x="{x - width/2}" y="{y - height/2}"
+
+    rect_tags = [
+        f"""<rect x="{x - width/2}" y="{y - height/2}"
                                 width="{width}" height="{height}"
                                 stroke="black" stroke-width="{0.1 + nodes_weight[i] * 0.5}"
                                 fill="{color_dict.get(i, 'transparent')}"
                                 opacity="{0.5 + nodes_weight[i] * 0.5}"
                                 transform="rotate({-angle * 57.2958}, {x}, {y})"/>"""
-        rect_tags.append(rect_tag)
+        for i, ((x, y), angle, valid) in enumerate(
+            zip(positions[:, 0, :], angles, mask_valid)
+        )
+        if valid
+    ]
     return rect_tags
 
 
@@ -89,6 +102,7 @@ def get_svg_trajectories(
     probs,
     positions,
     gt_trajectories,
+    mask_valid,
     *,
     agent_index,
     av_index,
@@ -100,16 +114,17 @@ def get_svg_trajectories(
     for node_index, (node_traj, node_positions, node_gt) in enumerate(
         zip(trajectories, positions, gt_trajectories)
     ):
-        node_origin = node_positions[0]
-        # if node_index == agent_index or node_index == av_index:
-        for mode_i, mode in enumerate(node_traj):
-            probability: float = probs[node_index, mode_i].item()
-            for x, y in mode:
+        if mask_valid[node_index]:
+            node_origin = node_positions[0]
+            # if node_index == agent_index or node_index == av_index:
+            for mode_i, mode in enumerate(node_traj):
+                probability: float = probs[node_index, mode_i].item()
+                for x, y in mode:
+                    trajectory_tags.append(
+                        f"""<circle cx="{x + node_origin[0]}" cy="{y + node_origin[1]}" r="0.3" fill="hsl(210, 100%, {100 - probability*100 * 2}%)" />"""
+                    )
+            for x, y in node_gt:
                 trajectory_tags.append(
-                    f"""<circle cx="{x + node_origin[0]}" cy="{y + node_origin[1]}" r="0.3" fill="hsl(210, 100%, {100 - probability*100 * 2}%)" />"""
+                    f"""<circle cx="{x + node_origin[0]}" cy="{y + node_origin[1]}" r="0.3" fill="hsl(0, 100%, 50%)" />"""
                 )
-        for x, y in node_gt:
-            trajectory_tags.append(
-                f"""<circle cx="{x + node_origin[0]}" cy="{y + node_origin[1]}" r="0.3" fill="hsl(0, 100%, 50%)" />"""
-            )
     return trajectory_tags
