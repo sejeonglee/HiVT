@@ -115,7 +115,7 @@ def get_svg_trajectories(
         zip(trajectories, positions, gt_trajectories)
     ):
         if mask_valid[node_index]:
-            node_origin = node_positions[0]
+            node_origin = node_positions[19]
             # if node_index == agent_index or node_index == av_index:
             for mode_i, mode in enumerate(node_traj):
                 probability: float = probs[node_index, mode_i].item()
@@ -125,6 +125,6 @@ def get_svg_trajectories(
                     )
             for x, y in node_gt:
                 trajectory_tags.append(
-                    f"""<circle cx="{x + node_origin[0]}" cy="{y + node_origin[1]}" r="0.3" fill="hsl(0, 100%, 50%)" />"""
+                    f"""<circle cx="{x}" cy="{y}" r="0.3" fill="hsl(0, 100%, 50%)" />"""
                 )
     return trajectory_tags

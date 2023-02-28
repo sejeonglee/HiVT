@@ -59,6 +59,21 @@ class HiVTVisualize(HiVT):
             2,
         )
 
+        # Restore per-node rotation by self.rotate
+        if self.rotate:
+            rotate_mat = torch.empty(data.num_nodes, 2, 2)
+            sin_vals = torch.sin(data["rotate_angles"])
+            cos_vals = torch.cos(data["rotate_angles"])
+            rotate_mat[:, 0, 0] = cos_vals
+            rotate_mat[:, 0, 1] = -sin_vals
+            rotate_mat[:, 1, 0] = sin_vals
+            rotate_mat[:, 1, 1] = cos_vals
+
+            nodes_traj = torch.bmm(
+                nodes_traj.reshape(data.num_nodes, -1, 2),
+                rotate_mat.inverse(),
+            ).reshape(nodes_traj.shape)
+
         split_indices = [b - a for a, b in _pairwise(data.av_index)] + [
             len(nodes_traj) - data.av_index[-1]
         ]

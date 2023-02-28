@@ -179,10 +179,7 @@ def visualize_seq_trajectory(
         input_data.positions, input_data.theta
     )
     predictions: torch.Tensor = visualize.restore_rotation(
-        predicted_trajectory.traj_tensor, input_data.theta
-    )
-    gt: torch.Tensor = visualize.restore_rotation(
-        input_data.y, input_data.theta
+        predicted_trajectory.traj_tensor, input_data.theta,
     )
     mask_valid = torch.cat(
         [torch.tensor([True]), torch.all(~input_data.padding_mask[1:,], dim=1)]
@@ -225,8 +222,8 @@ def visualize_seq_trajectory(
                 predictions,
                 probs,
                 positions,
-                gt,
-                mask_valid,
+                gt_trajectories=positions[:, :, :],
+                mask_valid=mask_valid,
                 av_index=input_data.av_index,
                 agent_index=input_data.agent_index,
             )
