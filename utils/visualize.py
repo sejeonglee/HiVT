@@ -35,7 +35,6 @@ def restore_rotation(tensor: Tensor, theta: Tensor) -> Tensor:
 
 def get_svg_node_rectangles(
     positions,
-    angles,
     nodes_weight,
     mask_valid,
     *,
@@ -45,17 +44,24 @@ def get_svg_node_rectangles(
     height=2,
 ) -> List[str]:
     rect_tags = []
-    color_dict = {agent_index: "red", av_index: "blue"}
+    color_dict = {agent_index: "red"}
+    if nodes_weight is None:
+        nodes_weight = torch.tensor([1.0 for _ in range(mask_valid.shape[0])])
+
+    angles = torch.atan2(
+        positions[:, 20, 1] - positions[:, 19, 1],
+        positions[:, 20, 0] - positions[:, 19, 0],
+    )
 
     rect_tags = [
         f"""<rect x="{x - width/2}" y="{y - height/2}"
                                 width="{width}" height="{height}"
-                                stroke="black" stroke-width="{0.1 + nodes_weight[i] * 0.5}"
-                                fill="{color_dict.get(i, 'transparent')}"
-                                opacity="{0.5 + nodes_weight[i] * 0.5}"
-                                transform="rotate({-angle * 57.2958}, {x}, {y})"/>"""
+                                stroke="black" stroke-width="0.1"
+                                fill="{color_dict.get(i, f'hsl(210, 100%, {100 - nodes_weight[i]*70}%)')}"
+                                opacity="0.95"
+                                transform="rotate({angle * 57.2958}, {x}, {y})"/>"""
         for i, ((x, y), angle, valid) in enumerate(
-            zip(positions[:, 0, :], angles, mask_valid)
+            zip(positions[:, 19, :], angles, mask_valid)
         )
         if valid
     ]
@@ -101,7 +107,6 @@ def get_svg_trajectories(
     trajectories,
     probs,
     positions,
-    gt_trajectories,
     mask_valid,
     *,
     agent_index,
@@ -111,8 +116,8 @@ def get_svg_trajectories(
 ) -> List[str]:
     trajectory_tags: List[str] = []
 
-    for node_index, (node_traj, node_positions, node_gt) in enumerate(
-        zip(trajectories, positions, gt_trajectories)
+    for node_index, (node_traj, node_positions) in enumerate(
+        zip(trajectories, positions)
     ):
         if mask_valid[node_index]:
             node_origin = node_positions[19]
@@ -123,8 +128,8 @@ def get_svg_trajectories(
                     trajectory_tags.append(
                         f"""<circle cx="{x + node_origin[0]}" cy="{y + node_origin[1]}" r="0.3" fill="hsl(210, 100%, {100 - probability*100 * 2}%)" />"""
                     )
-            for x, y in node_gt:
+            for timestep, (x, y) in enumerate(node_positions):
                 trajectory_tags.append(
-                    f"""<circle cx="{x}" cy="{y}" r="0.3" fill="hsl(0, 100%, 50%)" />"""
+                    f"""<circle cx="{x}" cy="{y}" r="0.3" fill="{'hsl(0, 100%, 50%)' if timestep > 19 else 'hsl(180,0%,50%)' }" />"""
                 )
     return trajectory_tags

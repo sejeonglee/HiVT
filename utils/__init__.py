@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from os import PathLike
 from typing import List, Optional, Tuple
 
 import torch
@@ -165,39 +166,47 @@ def visualize_seq_trajectory(
     input_data: TemporalData,
     predicted_trajectory: visualize.SeqTrajectory,
     weights: Optional[torch.Tensor] = None,
+    save_svg_path: Optional[PathLike] = None,
 ) -> str:
     """
     Args:
-        input_data(TemporalData): The input data.
-        predicted_trajectory(SeqTrajectory): The predicted trajectory.
-        option(VisualizeOption): The option to visualize.
+        input_data: The input data(called `data` in each steps).
+        predicted_trajectory: The predicted trajectory.
+        weights(Optional): The weights of the predicted trajectory.
+        save_svg_path(Optional): The path to save the svg string.
     Returns:
         The svg string.
-        if option.svg_filepath is not None, the svg string is also saved to the file.
+        if save_svg_path is not None, the svg string is also saved to the file.
     """
     positions: torch.Tensor = visualize.restore_rotation(
         input_data.positions, input_data.theta
     )
     predictions: torch.Tensor = visualize.restore_rotation(
-        predicted_trajectory.traj_tensor, input_data.theta,
+        predicted_trajectory.traj_tensor,
+        input_data.theta,
     )
     mask_valid = torch.cat(
         [torch.tensor([True]), torch.all(~input_data.padding_mask[1:,], dim=1)]
     )
     probs = predicted_trajectory.prob_tensor
-    rotate_angles: torch.Tensor = input_data.rotate_angles - input_data.theta
     canvas_size: float = abs(positions.max() - positions.min()).item()
+    title_size = canvas_size * 0.03
 
     svg_template = """
         <svg 
             xmlns="http://www.w3.org/2000/svg" version="1.1"
             width="800" height="800"
             viewBox="{min_x} {min_y} {canvas_width} {canvas_height}">
+            <text x="{title_x}" y="{title_y}" font-size="{title_size}" fill="black">Seq ID: {seq_id}</text>
         {trajectories}
         {centerlines}
         {rects}
         </svg>"""
     svg = svg_template.format(
+        seq_id=input_data.seq_id,
+        title_x=positions.min() - canvas_size * 0.1,
+        title_y=positions.min() - canvas_size * 0.1 + title_size,
+        title_size=title_size,
         min_x=positions.min() - canvas_size * 0.1,
         min_y=positions.min() - canvas_size * 0.1,
         canvas_width=canvas_size * 1.2,
@@ -205,7 +214,6 @@ def visualize_seq_trajectory(
         rects="\n".join(
             visualize.get_svg_node_rectangles(
                 positions,
-                rotate_angles,
                 weights,
                 mask_valid,
                 av_index=input_data.av_index,
@@ -222,13 +230,17 @@ def visualize_seq_trajectory(
                 predictions,
                 probs,
                 positions,
-                gt_trajectories=positions[:, :, :],
                 mask_valid=mask_valid,
                 av_index=input_data.av_index,
                 agent_index=input_data.agent_index,
             )
         ),
     )
+
+    if save_svg_path is not None:
+        with open(save_svg_path, "w") as f:
+            f.write(svg)
+
     return svg
 
 
