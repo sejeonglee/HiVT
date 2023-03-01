@@ -61,7 +61,7 @@ class HiVTVisualize(HiVT):
 
         # Restore per-node rotation by self.rotate
         if self.rotate:
-            rotate_mat = torch.empty(data.num_nodes, 2, 2)
+            rotate_mat = torch.empty(data.num_nodes, 2, 2, device=self.device)
             sin_vals = torch.sin(data["rotate_angles"])
             cos_vals = torch.cos(data["rotate_angles"])
             rotate_mat[:, 0, 0] = cos_vals
