@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from os import PathLike
-from typing import List, Optional, Tuple
+from typing import List, Literal, Optional, Tuple, Union
 
 import torch
 import torch.nn as nn
@@ -167,6 +167,7 @@ def visualize_seq_trajectory(
     predicted_trajectory: visualize.SeqTrajectory,
     weights: Optional[torch.Tensor] = None,
     save_svg_path: Optional[PathLike] = None,
+    traj_style: Union[Literal["points"], Literal["lines"]] = "lines",
 ) -> str:
     """
     Args:
@@ -174,6 +175,7 @@ def visualize_seq_trajectory(
         predicted_trajectory: The predicted trajectory.
         weights(Optional): The weights of the predicted trajectory.
         save_svg_path(Optional): The path to save the svg string.
+        traj_style(Optional): The style of the trajectory lines or points.
     Returns:
         The svg string.
         if save_svg_path is not None, the svg string is also saved to the file.
@@ -233,6 +235,7 @@ def visualize_seq_trajectory(
                 mask_valid=mask_valid,
                 av_index=input_data.av_index,
                 agent_index=input_data.agent_index,
+                style=traj_style,
             )
         ),
     )

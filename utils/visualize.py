@@ -1,5 +1,5 @@
 from os import PathLike
-from typing import List, Optional
+from typing import List, Literal, Optional, Union
 
 import numpy as np
 import torch
@@ -113,6 +113,7 @@ def get_svg_trajectories(
     av_index,
     width=4,
     height=2,
+    style: Union[Literal["points"], Literal["lines"]] = "lines",
 ) -> List[str]:
     trajectory_tags: List[str] = []
 
@@ -121,15 +122,32 @@ def get_svg_trajectories(
     ):
         if mask_valid[node_index]:
             node_origin = node_positions[19]
-            # if node_index == agent_index or node_index == av_index:
-            for mode_i, mode in enumerate(node_traj):
-                probability: float = probs[node_index, mode_i].item()
-                for x, y in mode:
+            if style == "points":
+                for mode_i, mode in enumerate(node_traj):
+                    probability: float = probs[node_index, mode_i].item()
+                    for x, y in mode:
+                        trajectory_tags.append(
+                            f"""<circle cx="{x + node_origin[0]}" cy="{y + node_origin[1]}" r="0.3" fill="hsl(210, 100%, {100 - probability*100 * 2}%)" />"""
+                        )
+                for timestep, (x, y) in enumerate(node_positions):
                     trajectory_tags.append(
-                        f"""<circle cx="{x + node_origin[0]}" cy="{y + node_origin[1]}" r="0.3" fill="hsl(210, 100%, {100 - probability*100 * 2}%)" />"""
+                        f"""<circle cx="{x}" cy="{y}" r="0.3" fill="{'hsl(0, 100%, 50%)' if timestep > 19 else 'hsl(180,0%,50%)' }" />"""
                     )
-            for timestep, (x, y) in enumerate(node_positions):
-                trajectory_tags.append(
-                    f"""<circle cx="{x}" cy="{y}" r="0.3" fill="{'hsl(0, 100%, 50%)' if timestep > 19 else 'hsl(180,0%,50%)' }" />"""
+            if style == "lines":
+                trajectory_tags.extend(
+                    [
+                        f"""<polyline points="{','.join([f'{x + node_origin[0]},{y + node_origin[1]}' for x, y in mode])}"
+                            style="fill:none;stroke:hsl(210, 100%, {100 - probs[node_index, mode_i].item()*100 * 2}%);stroke-width:0.5"/>"""
+                        for mode_i, mode in enumerate(node_traj)
+                    ]
                 )
+                trajectory_tags.extend(
+                    [
+                        f"""<polyline points="{','.join([f'{x},{y}' for x, y in node_positions[0:20]])}"
+                        style="fill:none;stroke:hsl(180, 0%, 50%);stroke-width:0.5"/>""",
+                        f"""<polyline points="{','.join([f'{x},{y}' for x, y in node_positions[20:]])}"
+                        style="fill:none;stroke:hsl(0, 100%, 50%);stroke-width:0.5"/>""",
+                    ]
+                )
+
     return trajectory_tags
