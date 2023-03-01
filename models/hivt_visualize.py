@@ -6,7 +6,7 @@ import torch
 from torch import Tensor
 
 from models.hivt import HiVT
-from utils import TemporalData
+from utils import TemporalData, visualize_seq_trajectory
 from utils.visualize import SeqTrajectory
 
 
@@ -21,21 +21,49 @@ class HiVTVisualize(HiVT):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def predict_step(  # type: ignore[override]
-        self,
-        data: TemporalData,
-        batch_idx: int,
-        dataloader_idx: Optional[int] = None,
-    ) -> List[SeqTrajectory]:
-        """
-        Returns:
-            Dict[seq_ids, predicted values]
-        """
-        # Forwarding the data through the model
-        y_hat: Tensor
-        pi: Tensor
+    def validation_step(self, data, batch_idx):
         y_hat, pi = self(data)
+        reg_mask = ~data["padding_mask"][:, self.historical_steps :]
+        l2_norm = (
+            torch.norm(y_hat[:, :, :, :2] - data.y, p=2, dim=-1) * reg_mask
+        ).sum(
+            dim=-1
+        )  # [F, N]
+        best_mode = l2_norm.argmin(dim=0)
+        y_hat_best = y_hat[best_mode, torch.arange(data.num_nodes)]
+        reg_loss = self.reg_loss(y_hat_best[reg_mask], data.y[reg_mask])
+        self.log(
+            "val_reg_loss",
+            reg_loss,
+            prog_bar=True,
+            on_step=False,
+            on_epoch=True,
+            batch_size=1,
+        )
 
+        y_hat_agent = y_hat[:, data["agent_index"], :, :2]
+        y_agent = data.y[data["agent_index"]]
+        fde_agent = torch.norm(
+            y_hat_agent[:, :, -1] - y_agent[:, -1], p=2, dim=-1
+        )
+        best_mode_agent = fde_agent.argmin(dim=0)
+        y_hat_best_agent = y_hat_agent[
+            best_mode_agent, torch.arange(data.num_graphs)
+        ]
+
+        # Visualize Codes!
+        seq_trajectories = self.get_seqtrajectory_list(data, y_hat, pi)
+        for seq in seq_trajectories:
+            visualize_seq_trajectory(
+                data,
+                seq,
+                weights=None,
+                save_svg_path=None,
+                traj_style="lines",
+            )
+
+
+    def get_seqtrajectory_list(self, data, y_hat, pi):
         # Info about the output data shape
         assert y_hat.shape == (
             self.num_modes,
@@ -90,5 +118,20 @@ class HiVTVisualize(HiVT):
                 data.seq_id, traj_sliced_per_seq, prob_sliced_per_seq
             )
         ]
+        
+        return output
+
+    def predict_step(  # type: ignore[override]
+        self,
+        data: TemporalData,
+        batch_idx: int,
+        dataloader_idx: Optional[int] = None,
+    ) -> List[SeqTrajectory]:
+        # Forwarding the data through the model
+        y_hat: Tensor
+        pi: Tensor
+        y_hat, pi = self(data)
+
+        output = self.get_seqtrajectory_list(data, y_hat, pi)
 
         return output
