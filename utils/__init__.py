@@ -188,7 +188,10 @@ def visualize_seq_trajectory(
         input_data.theta,
     )
     mask_valid = torch.cat(
-        [torch.tensor([True]), torch.all(~input_data.padding_mask[1:,], dim=1)]
+        [
+            torch.tensor([True], device=input_data.padding_mask.device),
+            torch.all(~input_data.padding_mask[1:,], dim=1),
+        ]
     )
     probs = predicted_trajectory.prob_tensor
     canvas_size: float = abs(positions.max() - positions.min()).item()
