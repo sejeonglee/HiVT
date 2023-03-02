@@ -93,7 +93,9 @@ def get_svg_map_centerlines(
             and np.max(lane_cl[:, 1]) - origin[1] > y_min
         ):
             lane_centerlines.append(
-                np.array([lane_cl[:, 0] - origin[0], lane_cl[:, 1] - origin[1]])
+                np.array(
+                    [lane_cl[:, 0] - origin[0], lane_cl[:, 1] - origin[1]]
+                )
             )
 
     centerline_tags = [
@@ -117,7 +119,7 @@ def get_svg_trajectories(
     style: Union[Literal["points"], Literal["lines"]] = "lines",
 ) -> List[str]:
     trajectory_tags: List[str] = []
-
+    gt_tags: List[str] = []
     for node_index, (node_traj, node_positions) in enumerate(
         zip(trajectories, positions)
     ):
@@ -131,24 +133,30 @@ def get_svg_trajectories(
                             f"""<circle cx="{x + node_origin[0]}" cy="{y + node_origin[1]}" r="0.3" fill="hsl(210, 100%, {100 - probability*100 * 2}%)" />"""
                         )
                 for timestep, (x, y) in enumerate(node_positions):
-                    trajectory_tags.append(
+                    gt_tags.append(
                         f"""<circle cx="{x}" cy="{y}" r="0.3" fill="{'hsl(0, 100%, 50%)' if timestep > 19 else 'hsl(180,0%,50%)' }" />"""
                     )
             if style == "lines":
-                trajectory_tags.extend(
-                    [
+                tags = [
+                    (
                         f"""<polyline points="{','.join([f'{x + node_origin[0]},{y + node_origin[1]}' for x, y in mode])}"
-                            style="fill:none;stroke:hsl(210, 100%, {100 - probs[node_index, mode_i].item()*100 * 2}%);stroke-width:0.5"/>"""
-                        for mode_i, mode in enumerate(node_traj)
-                    ]
-                )
-                trajectory_tags.extend(
+                            style="fill:none;stroke:hsl(210, 100%, {110 - probs[node_index, mode_i].item()*100 * 2.5}%);
+                            opacity:{0.2+probs[node_index, mode_i].item()*3};stroke-width:0.8"
+                            stroke-linecap="round"/>""",
+                        probs[node_index, mode_i],
+                    )
+                    for mode_i, mode in enumerate(node_traj)
+                ]
+                tags.sort(key=lambda x: x[1])
+                trajectory_tags.extend(map(lambda t: t[0], tags))
+
+                gt_tags.extend(
                     [
                         f"""<polyline points="{','.join([f'{x},{y}' for x, y in node_positions[0:20]])}"
-                        style="fill:none;stroke:hsl(180, 0%, 50%);stroke-width:0.5"/>""",
+                        style="fill:none;stroke:hsl(180, 0%, 50%);stroke-width:0.3"/>""",
                         f"""<polyline points="{','.join([f'{x},{y}' for x, y in node_positions[20:]])}"
-                        style="fill:none;stroke:hsl(0, 100%, 50%);stroke-width:0.5"/>""",
+                        style="fill:none;stroke:hsl(0, 100%, 50%);stroke-width:0.3"/>""",
                     ]
                 )
-
+    trajectory_tags.extend(gt_tags)
     return trajectory_tags
