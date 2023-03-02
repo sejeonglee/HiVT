@@ -1,6 +1,7 @@
 # Copyright (c) 2023, Sejeong Lee. All rights reserved.
 from argparse import ArgumentParser
 import functools
+import os
 import pickle
 
 import pytorch_lightning as pl
@@ -8,7 +9,7 @@ import torch
 from torch_geometric.data import DataLoader
 
 from datasets import ArgoverseV1Dataset
-from models.hivt import HiVT
+from models.hivt_suibmit import HiVTSubmit
 from argoverse.evaluation.competition_util import generate_forecasting_h5
 import utils.evalai as evalai
 
@@ -17,7 +18,7 @@ if __name__ == "__main__":
 
     parser = ArgumentParser()
     parser.add_argument("--root", type=str, required=True)
-    parser.add_argument("--batch_size", type=int, default=32)
+    parser.add_argument("--batch_size", type=int, default=192)
     parser.add_argument("--num_workers", type=int, default=8)
     parser.add_argument("--pin_memory", type=bool, default=True)
     parser.add_argument("--persistent_workers", type=bool, default=True)
@@ -33,7 +34,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     trainer = pl.Trainer.from_argparse_args(args)
-    model = HiVT.load_from_checkpoint(
+    model = HiVTSubmit.load_from_checkpoint(
         checkpoint_path=args.ckpt_path, parallel=True
     )
     test_dataset = ArgoverseV1Dataset(
@@ -49,7 +50,10 @@ if __name__ == "__main__":
     )
 
     predictions = functools.reduce(
-        lambda former_dict, latter_dict: {**former_dict, **latter_dict},
+        lambda former_tuple, latter_tuple: (
+            {**former_tuple[0], **latter_tuple[0]},
+            {**former_tuple[1], **latter_tuple[1]},
+        ),
         trainer.predict(model, dataloader),
     )
 
@@ -59,7 +63,14 @@ if __name__ == "__main__":
         pickle.dump(predictions, open(filename, "wb"))
 
     output_path = "competition_files/"
-    generate_forecasting_h5(predictions, output_path, filename=args.h5_filename)
+    if not os.path.exists(output_path):
+        os.mkdir(output_path)
+    generate_forecasting_h5(
+        predictions[0],
+        output_path,
+        filename=args.h5_filename,
+        probabilities=predictions[1],
+    )
 
     submission_detail = evalai.SubmissionDetails(
         method_name=args.method_name,
