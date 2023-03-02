@@ -28,7 +28,8 @@ def restore_rotation(tensor: Tensor, theta: Tensor) -> Tensor:
         [
             [torch.cos(theta), -torch.sin(theta)],
             [torch.sin(theta), torch.cos(theta)],
-        ]
+        ],
+        device=tensor.device,
     )
     return tensor @ rotation_mat.inverse()
 
