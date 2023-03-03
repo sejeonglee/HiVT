@@ -4,7 +4,7 @@ import torch
 from torch import Tensor
 
 from models.hivt import HiVT
-from utils import TemporalData, visualize
+from utils import TemporalData
 
 
 class HiVTSubmit(HiVT):

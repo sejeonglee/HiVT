@@ -9,7 +9,7 @@ import torch
 from torch_geometric.data import DataLoader
 
 from datasets import ArgoverseV1Dataset
-from models.hivt_suibmit import HiVTSubmit
+from models.hivt_submit import HiVTSubmit
 from argoverse.evaluation.competition_util import generate_forecasting_h5
 import utils.evalai as evalai
 
