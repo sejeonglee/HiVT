@@ -72,17 +72,15 @@ class HiVTSubmit(HiVT):
             ).reshape(nodes_traj.shape)
 
         # Selecting data for agents
-        predicted_val: torch.Tensor = (
-            self.batch_restore_rotation(
-                nodes_traj[data.agent_index, :, :, :2], data.theta
-            )
-            + data.origin.unsqueeze(-2)
-            .unsqueeze(-2)
-            .expand(batch_size, self.num_modes, self.future_steps, 2)
-            - data.positions[data.agent_index, 19, :]
+        predicted_val: torch.Tensor = self.batch_restore_rotation(
+            nodes_traj[data.agent_index, :, :, :2]
+            + data.positions[data.agent_index, 19, :]
             .unsqueeze(-2)
             .unsqueeze(-2)
-            .expand(batch_size, self.num_modes, self.future_steps, -1)
+            .expand(batch_size, self.num_modes, self.future_steps, -1),
+            data.theta,
+        ) + data.origin.unsqueeze(-2).unsqueeze(-2).expand(
+            batch_size, self.num_modes, self.future_steps, 2
         )
         predicted_prob: torch.Tensor = softmax_pi[data.agent_index, :]
 
